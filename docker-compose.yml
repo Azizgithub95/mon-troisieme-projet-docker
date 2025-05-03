@@ -1,31 +1,53 @@
 version: '3.8'
+
 services:
   jenkins:
     image: jenkins/jenkins:lts
     container_name: jenkins
-    user: root                      # pour pouvoir installer docker-cli
+    user: root
     ports:
-      - "8090:8080"
+      - "8090:8080"          # Jenkins écoute en 8080, on mappe sur 8090
+      - "50000:50000"        # pour les agents Jenkins si un jour
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock     # accès au démon Docker
-    # on doit aussi installer enfin le client docker dans l’image
-    command: >
-      /bin/bash -c "
-        apt-get update &&
-        apt-get install -y docker.io &&
-        rm -rf /var/lib/apt/lists/* &&
-        /sbin/tini -- /usr/local/bin/jenkins.sh
-      "
+      - /var/run/docker.sock:/var/run/docker.sock   # donne accès au démon Docker de l’hôte
+    # On installe docker-cli au démarrage avant de lancer Jenkins
+    entrypoint:
+      - bash
+      - -c
+      - |
+        apt-get update \
+        && apt-get install -y docker.io \
+        && rm -rf /var/lib/apt/lists/* \
+        && exec /sbin/tini -- /usr/local/bin/jenkins.sh
 
   api:
-    # ... ton service api ...
+    build:
+      context: ./service-api
+      dockerfile: Dockerfile
+    container_name: st-api
+    ports:
+      - "4000:4000"
 
   web:
-    # ... ton service web ...
+    build:
+      context: ./service-web
+      dockerfile: Dockerfile
+    container_name: st-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
 
   test:
-    # ... ton service test ...
+    build:
+      context: ./service-test
+      dockerfile: Dockerfile
+    container_name: st-test
+    depends_on:
+      - api
+      - web
+    # pas de port exposé – on lève le conteneur uniquement pour exécuter K6
 
 volumes:
   jenkins_home:
