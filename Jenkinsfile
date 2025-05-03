@@ -86,7 +86,7 @@ pipeline {
       }
     }
 
-    stage('Push to Docker Hub') {
+    stage('Push to enfin Docker Hub') {
       steps {
         withDockerRegistry([ credentialsId: DOCKERHUB_CREDS, url: '' ]) {
           sh """

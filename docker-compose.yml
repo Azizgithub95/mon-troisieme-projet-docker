@@ -27,4 +27,18 @@ services:
     depends_on:
       - api
       - web
-    # pas de ports exposés : on l'utilise pour K6 uniquement via le réseau docker
+    # pas de port exposé, utilisé pour exécuter K6 sur le réseau Docker
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: st-jenkins
+    ports:
+      - "8090:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # si tu veux que Jenkins puisse lancer des builds Docker,
+      # tu peux aussi monter le socket Docker :
+      # - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins_home:
