@@ -1,9 +1,9 @@
-version: '3.8'
+
 
 services:
   jenkins:
     image: jenkins/jenkins:lts
-    container_name: jenkins
+    container_name: st-jenkins
     user: root
     ports:
       - "8090:8080"          # Jenkins écoute en 8080, on mappe sur 8090
