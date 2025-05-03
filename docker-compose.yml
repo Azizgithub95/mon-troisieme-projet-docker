@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./service-api
+      dockerfile: Dockerfile
+    container_name: st-api
+    ports:
+      - "4000:4000"
+
+  web:
+    build:
+      context: ./service-web
+      dockerfile: Dockerfile
+    container_name: st-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+  test:
+    build:
+      context: ./service-test
+      dockerfile: Dockerfile
+    container_name: st-test
+    depends_on:
+      - api
+      - web
+    # pas de ports exposés : on l'utilise pour K6 uniquement via le réseau docker
