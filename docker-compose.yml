@@ -1,44 +1,31 @@
 version: '3.8'
-
 services:
-  api:
-    build:
-      context: ./service-api
-      dockerfile: Dockerfile
-    container_name: st-api
-    ports:
-      - "4000:4000"
-
-  web:
-    build:
-      context: ./service-web
-      dockerfile: Dockerfile
-    container_name: st-web
-    ports:
-      - "8080:80"
-    depends_on:
-      - api
-
-  test:
-    build:
-      context: ./service-test
-      dockerfile: Dockerfile
-    container_name: st-test
-    depends_on:
-      - api
-      - web
-    # pas de port exposé, utilisé pour exécuter K6 sur le réseau Docker
-
   jenkins:
     image: jenkins/jenkins:lts
-    container_name: st-jenkins
+    container_name: jenkins
+    user: root                      # pour pouvoir installer docker-cli
     ports:
       - "8090:8080"
     volumes:
       - jenkins_home:/var/jenkins_home
-      # si tu veux que Jenkins puisse lancer des builds Docker,
-      # tu peux aussi monter le socket Docker :
-      # - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock     # accès au démon Docker
+    # on doit aussi installer le client docker dans l’image
+    command: >
+      /bin/bash -c "
+        apt-get update &&
+        apt-get install -y docker.io &&
+        rm -rf /var/lib/apt/lists/* &&
+        /sbin/tini -- /usr/local/bin/jenkins.sh
+      "
+
+  api:
+    # ... ton service api ...
+
+  web:
+    # ... ton service web ...
+
+  test:
+    # ... ton service test ...
 
 volumes:
   jenkins_home:
