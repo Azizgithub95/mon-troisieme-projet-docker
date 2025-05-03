@@ -6,7 +6,7 @@ services:
     container_name: st-jenkins
     user: root
     ports:
-      - "8090:8080"          # Jenkins écoute en 8080, on mappe sur 8090
+      - "8090:8080"          # Jenkins écoute encore 8080, on mappe sur 8090
       - "50000:50000"        # pour les agents Jenkins si un jour
     volumes:
       - jenkins_home:/var/jenkins_home
