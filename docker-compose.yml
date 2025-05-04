@@ -4,10 +4,11 @@ services:
       context: ./service-jenkins
       dockerfile: Dockerfile
     container_name: st-jenkins
-    privileged: true                # donne un peu plus de latitude pour accéder au socket
+    user: root                       # ← Jenkins tourne en root
+    privileged: true                 # ← toujours bon pour lever d’éventuels verrous
     ports:
-      - "8090:8080"                 # UI sur localhost:8090
-      - "50000:50000"               # si vous utilisez plus tard des agents distants
+      - "8090:8080"                  # UI Jenkins
+      - "50000:50000"                # agents Jenkins
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
@@ -35,7 +36,7 @@ services:
     depends_on:
       - api
       - web
-    # pas de ports exposés, on lève ce container uniquement pour K6
+    # pas de ports exposés — juste pour K6
 
 volumes:
   jenkins_home:
