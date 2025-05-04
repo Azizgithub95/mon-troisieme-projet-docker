@@ -1,6 +1,11 @@
 pipeline {
   agent any
 
+  // 1️⃣ On désactive le checkout léger automatique
+  options {
+    skipDefaultCheckout()
+  }
+
   environment {
     DOCKERHUB_CREDS  = 'docker-hub-creds'
     DOCKERHUB_ORG    = 'aziztesteur95100'
@@ -12,7 +17,10 @@ pipeline {
 
   stages {
     stage('Checkout') {
-      steps { checkout scm }
+      steps {
+        // 2️⃣ Clone complet du repo (inclut .git)
+        checkout scm
+      }
     }
 
     stage('Build images in parallel') {
@@ -37,7 +45,6 @@ pipeline {
 
     stage('Start services for testing') {
       steps {
-        // on démarre seulement api + web en arrière-plan
         sh 'docker-compose up -d api web'
       }
     }
@@ -46,13 +53,11 @@ pipeline {
       parallel {
         stage('K6') {
           steps {
-            // utilise l'image test (contenant k6 + ton script)
             sh "docker run --rm --network=mon-troisieme-projet-docker_default ${IMAGE_TEST}:${TAG}"
           }
         }
         stage('Cypress') {
           steps {
-            // lance Cypress contre le service web
             sh """
               docker run --rm \\
                 --network=mon-troisieme-projet-docker_default \\
@@ -65,7 +70,6 @@ pipeline {
         }
         stage('Newman') {
           steps {
-            // lance Newman contre l'API
             sh """
               docker run --rm \\
                 --network=mon-troisieme-projet-docker_default \\
