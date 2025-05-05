@@ -1,11 +1,6 @@
 pipeline {
   agent any
 
-  // 1️⃣ On désactive le checkout léger automatique
-  options {
-    skipDefaultCheckout()
-  }
-
   environment {
     DOCKERHUB_CREDS  = 'docker-hub-creds'
     DOCKERHUB_ORG    = 'aziztesteur95100'
@@ -16,26 +11,19 @@ pipeline {
   }
 
   stages {
-    stage('Checkout') {
-      steps {
-        // 2️⃣ Clone complet du repo (inclut .git)
-        checkout scm
-      }
-    }
-
-    stage('Build images in parallel') {
+    stage('Build Images') {
       parallel {
-        stage('Build API') {
+        stage('API') {
           steps {
             sh "docker build -t ${IMAGE_API}:${TAG} -f service-api/Dockerfile service-api"
           }
         }
-        stage('Build Web') {
+        stage('Web') {
           steps {
             sh "docker build -t ${IMAGE_WEB}:${TAG} -f service-web/Dockerfile service-web"
           }
         }
-        stage('Build Test') {
+        stage('Test Image') {
           steps {
             sh "docker build -t ${IMAGE_TEST}:${TAG} -f service-test/Dockerfile service-test"
           }
@@ -43,63 +31,63 @@ pipeline {
       }
     }
 
-    stage('Start services for testing') {
+    stage('Run Services') {
       steps {
         sh 'docker-compose up -d api web'
       }
     }
 
-    stage('Tests (parallel)') {
+    stage('Execute Tests in Parallel') {
       parallel {
-        stage('K6') {
+        stage('K6 Load') {
           steps {
-            sh "docker run --rm --network=mon-troisieme-projet-docker_default ${IMAGE_TEST}:${TAG}"
+            sh "docker run --rm --network=${JOB_NAME}_default ${IMAGE_TEST}:${TAG}"
           }
         }
-        stage('Cypress') {
+        stage('Cypress E2E') {
           steps {
-            sh """
-              docker run --rm \\
-                --network=mon-troisieme-projet-docker_default \\
-                -v "\$PWD/service-web:/e2e" \\
-                cypress/included:12.17.4 \\
-                --config baseUrl=http://web:80 \\
-                --spec "/e2e/**/*"
-            """
+            sh '''
+              docker run --rm \
+                --network=${JOB_NAME}_default \
+                -v "$PWD/tests/cypress:/e2e" \
+                cypress/included:12.17.4 \
+                --config baseUrl=http://web:80 \
+                --spec "/e2e/integration/**/*"
+            '''
           }
         }
-        stage('Newman') {
+        stage('Newman API') {
           steps {
-            sh """
-              docker run --rm \\
-                --network=mon-troisieme-projet-docker_default \\
-                -v "\$PWD/service-api:/etc/newman" \\
-                postman/newman:alpine \\
-                run /etc/newman/MOCK_AZIZ_SERVEUR.postman_collection.json \\
-                --reporters cli,html \\
+            sh '''
+              docker run --rm \
+                --network=${JOB_NAME}_default \
+                -v "$PWD/tests/newman:/etc/newman" \
+                postman/newman:alpine \
+                run /etc/newman/MOCK_AZIZ_SERVEUR.postman_collection.json \
+                --reporters cli,html \
                 --reporter-html-export reports/newman/newman-report.html
-            """
+            '''
           }
         }
       }
     }
 
-    stage('Stop services') {
+    stage('Teardown') {
       steps {
         sh 'docker-compose down'
       }
     }
 
-    stage('Push to enfin Docker Hub') {
+    stage('Push to Docker Hub') {
       steps {
-        withDockerRegistry([ credentialsId: DOCKERHUB_CREDS, url: '' ]) {
-          sh """
+        withDockerRegistry([credentialsId: DOCKERHUB_CREDS, url: '']) {
+          sh '''
             for IMG in ${IMAGE_API} ${IMAGE_WEB} ${IMAGE_TEST}; do
-              docker push \$IMG:${TAG}
-              docker tag \$IMG:${TAG} \$IMG:latest
-              docker push \$IMG:latest
+              docker push $IMG:${TAG}
+              docker tag $IMG:${TAG} $IMG:latest
+              docker push $IMG:latest
             done
-          """
+          '''
         }
       }
     }
