@@ -1,6 +1,11 @@
 pipeline {
   agent any
 
+  options {
+    // Désactive le checkout automatique en début de pipeline
+    skipDefaultCheckout()
+  }
+
   environment {
     DOCKERHUB_CREDS  = 'docker-hub-creds'
     DOCKERHUB_ORG    = 'aziztesteur95100'
@@ -11,6 +16,13 @@ pipeline {
   }
 
   stages {
+    stage('SCM Checkout') {
+      steps {
+        // on fait le checkout nous-mêmes, sur la workspace courante
+        checkout scm
+      }
+    }
+
     stage('Build Images') {
       parallel {
         stage('API') {
